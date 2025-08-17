@@ -1,0 +1,31 @@
+# Ignore all environment files in any service
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Logs
+*.log
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Docker
+*.pid
+
+# VSCode / PyCharm / IDE settings
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db

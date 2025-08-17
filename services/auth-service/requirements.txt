@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy[asyncio]>=2.0
+asyncpg
+psycopg2-binary
+alembic
+python-dotenv
+pydantic-settings>=2.0
+pydantic[email]
+bcrypt
+python-jose[cryptography]   
+fastcrud
+python-multipart
+redis
+aiosmtplib
+pika
+httpx

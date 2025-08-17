@@ -1,0 +1,149 @@
+services:
+
+  ##################
+  # Infrastructure #
+  ##################
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - sehat_data:/var/lib/postgresql/data
+      - ./postgres-init/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - sehat-network
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - sehat-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - sehat-network
+
+  ####################
+  # Backend Services #
+  ####################
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./services/auth-service:/app
+    env_file:
+      - ./services/auth-service/.env
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - sehat-network
+
+  hospital-service:
+    build: ./services/hospital-service
+    container_name: hospital-service
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./services/hospital-service:/app
+    env_file:
+      - ./services/hospital-service/.env
+    depends_on:
+      - postgres
+    networks:
+      - sehat-network
+
+  resource-service:
+    build: ./services/resource-service
+    container_name: resource-service
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./services/resource-service:/app
+    env_file:
+      - ./services/resource-service/.env
+    depends_on:
+      - postgres
+    networks:
+      - sehat-network
+
+  blood-service:
+    build: ./services/blood-service
+    container_name: blood-service
+    ports:
+      - "8004:8000"
+    volumes:
+      - ./services/blood-service:/app
+    env_file:
+      - ./services/blood-service/.env
+    depends_on:
+      - postgres
+    networks:
+      - sehat-network
+
+  ngo-service:
+    build: ./services/ngo-service
+    container_name: ngo-service
+    ports:
+      - "8005:8000"
+    volumes:
+      - ./services/ngo-service:/app
+    env_file:
+      - ./services/ngo-service/.env
+    depends_on:
+      - postgres
+    networks:
+      - sehat-network
+
+  notification-service:
+    build: ./services/notification-service
+    container_name: notification-service
+    ports:
+      - "8007:8000"
+    volumes:
+      - ./services/notification-service:/app
+    env_file:
+      - ./services/notification-service/.env
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - sehat-network
+
+  ai-service:
+    build: ./services/ai-service
+    container_name: ai-service
+    ports:
+      - "8008:8000"
+    volumes:
+      - ./services/ai-service:/app
+    env_file:
+      - ./services/ai-service/.env
+    depends_on:
+      - postgres
+    networks:
+      - sehat-network
+
+
+volumes:
+  sehat_data:
+
+networks:
+  sehat-network:
+    driver: bridge
