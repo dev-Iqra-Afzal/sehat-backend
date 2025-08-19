@@ -93,8 +93,17 @@ The following environment variables are required:
 If you encounter issues with the Docker-in-Docker approach:
 
 1. Check the logs in the Render dashboard
-2. Consider using the alternative deployment approach (Option 2)
-3. Make sure your Render account has the necessary permissions and plan
+2. The deployment includes a fallback mode that will automatically run just the gateway service if Docker fails to start
+3. Consider using the alternative deployment approach (Option 2)
+4. Make sure your Render account has the necessary permissions and plan
+
+### Fallback Mode
+
+The deployment includes a fallback mode that will automatically activate if Docker fails to start:
+
+1. Only the gateway service will run directly (without Docker)
+2. The gateway will be configured to connect to other services deployed separately
+3. You'll need to deploy the other services separately using Option 2
 
 ### Database Connection Issues
 

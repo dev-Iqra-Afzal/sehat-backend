@@ -21,4 +21,11 @@ services:
     disk:
       name: docker-data
       mountPath: /var/lib/docker
-      sizeGB: 10
+      sizeGB: 20
+    env:
+      - key: DEBIAN_FRONTEND
+        value: noninteractive
+      - key: DOCKER_TLS_CERTDIR
+        value: ""
+      - key: DOCKER_CLI_EXPERIMENTAL
+        value: "enabled"
