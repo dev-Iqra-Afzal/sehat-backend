@@ -1,149 +1,176 @@
+version: '3.8'
+
 services:
-
-  ##################
-  # Infrastructure #
-  ##################
-
   postgres:
     image: postgres:15
-    container_name: postgres
-    restart: always
-    env_file:
-      - ./.env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: galadhrim154
+      POSTGRES_MULTIPLE_DATABASES: auth_db,resource_db,notification_db
     volumes:
-      - sehat_data:/var/lib/postgresql/data
-      - ./postgres-init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
-    networks:
-      - sehat-network
-
-  redis:
-    image: redis:alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - sehat-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
-    networks:
-      - sehat-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  ####################
-  # Backend Services #
-  ####################
+  gateway-service:
+    build:
+      context: ./services/gateway-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - APP_NAME=Sehat-Iqra Gateway Service
+      - PROJECT_NAME=Sehat-Iqra Gateway Service
+      - API_V1_STR=/api/v1
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - HOSPITAL_SERVICE_URL=http://hospital-service:8000
+      - RESOURCE_SERVICE_URL=http://resource-service:8000
+      - BLOOD_SERVICE_URL=http://blood-service:8000
+      - NGO_SERVICE_URL=http://ngo-service:8000
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8000
+      - AI_SERVICE_URL=http://ai-service:8000
+      - BACKEND_CORS_ORIGINS=["https://sehat-iqra.onrender.com", "https://www.sehat-iqra.onrender.com"]
+    depends_on:
+      - auth-service
+      - hospital-service
+      - resource-service
+      - blood-service
+      - ngo-service
+      - notification-service
+      - ai-service
 
   auth-service:
-    build: ./services/auth-service
-    container_name: auth-service
-    ports:
-      - "8001:8000"
-    volumes:
-      - ./services/auth-service:/app
-    env_file:
-      - ./services/auth-service/.env
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - APP_NAME=Auth Service
+      - POSTGRES_USER=auth_user
+      - POSTGRES_PASSWORD=galadhrim154
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=auth_db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
-    networks:
-      - sehat-network
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   hospital-service:
-    build: ./services/hospital-service
-    container_name: hospital-service
-    ports:
-      - "8002:8000"
-    volumes:
-      - ./services/hospital-service:/app
-    env_file:
-      - ./services/hospital-service/.env
+    build:
+      context: ./services/hospital-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_NAME=Hospital Service
     depends_on:
       - postgres
-    networks:
-      - sehat-network
 
   resource-service:
-    build: ./services/resource-service
-    container_name: resource-service
-    ports:
-      - "8003:8000"
-    volumes:
-      - ./services/resource-service:/app
-    env_file:
-      - ./services/resource-service/.env
+    build:
+      context: ./services/resource-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_NAME=Resource Service
+      - POSTGRES_USER=resource_user
+      - POSTGRES_PASSWORD=galadhrim154
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=resource_db
     depends_on:
-      - postgres
-    networks:
-      - sehat-network
+      postgres:
+        condition: service_healthy
 
   blood-service:
-    build: ./services/blood-service
-    container_name: blood-service
-    ports:
-      - "8004:8000"
-    volumes:
-      - ./services/blood-service:/app
-    env_file:
-      - ./services/blood-service/.env
+    build:
+      context: ./services/blood-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_NAME=Blood Service
     depends_on:
       - postgres
-    networks:
-      - sehat-network
 
   ngo-service:
-    build: ./services/ngo-service
-    container_name: ngo-service
-    ports:
-      - "8005:8000"
-    volumes:
-      - ./services/ngo-service:/app
-    env_file:
-      - ./services/ngo-service/.env
+    build:
+      context: ./services/ngo-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_NAME=NGO Service
     depends_on:
       - postgres
-    networks:
-      - sehat-network
 
   notification-service:
-    build: ./services/notification-service
-    container_name: notification-service
-    ports:
-      - "8007:8000"
-    volumes:
-      - ./services/notification-service:/app
-    env_file:
-      - ./services/notification-service/.env
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_NAME=Notification Service
+      - POSTGRES_USER=notification_user
+      - POSTGRES_PASSWORD=galadhrim154
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=notification_db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
     depends_on:
-      - postgres
-      - rabbitmq
-    networks:
-      - sehat-network
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   ai-service:
-    build: ./services/ai-service
-    container_name: ai-service
-    ports:
-      - "8008:8000"
-    volumes:
-      - ./services/ai-service:/app
-    env_file:
-      - ./services/ai-service/.env
+    build:
+      context: ./services/ai-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_NAME=AI Service
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     depends_on:
       - postgres
-    networks:
-      - sehat-network
-
 
 volumes:
-  sehat_data:
-
-networks:
-  sehat-network:
-    driver: bridge
+  postgres_data:
