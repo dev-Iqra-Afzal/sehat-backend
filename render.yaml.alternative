@@ -1,0 +1,208 @@
+services:
+  # Gateway service
+  - type: web
+    name: sehat-iqra-gateway
+    env: docker
+    dockerfilePath: ./Dockerfile.alternative
+    plan: standard
+    branch: main
+    numInstances: 1
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: AUTH_SERVICE_URL
+        fromService:
+          type: web
+          name: sehat-iqra-auth
+          envVarKey: INTERNAL_URL
+      - key: HOSPITAL_SERVICE_URL
+        fromService:
+          type: web
+          name: sehat-iqra-hospital
+          envVarKey: INTERNAL_URL
+      - key: RESOURCE_SERVICE_URL
+        fromService:
+          type: web
+          name: sehat-iqra-resource
+          envVarKey: INTERNAL_URL
+      - key: BLOOD_SERVICE_URL
+        fromService:
+          type: web
+          name: sehat-iqra-blood
+          envVarKey: INTERNAL_URL
+      - key: NGO_SERVICE_URL
+        fromService:
+          type: web
+          name: sehat-iqra-ngo
+          envVarKey: INTERNAL_URL
+      - key: NOTIFICATION_SERVICE_URL
+        fromService:
+          type: web
+          name: sehat-iqra-notification
+          envVarKey: INTERNAL_URL
+      - key: AI_SERVICE_URL
+        fromService:
+          type: web
+          name: sehat-iqra-ai
+          envVarKey: INTERNAL_URL
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://sehat-iqra.onrender.com", "https://www.sehat-iqra.onrender.com"]'
+
+  # Database service
+  - type: pserv
+    name: sehat-iqra-db
+    env: docker
+    plan: standard
+    repo: https://github.com/render-examples/postgres
+    envVars:
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_MULTIPLE_DATABASES
+        value: auth_db,resource_db,notification_db
+
+  # Auth service
+  - type: web
+    name: sehat-iqra-auth
+    env: python
+    buildCommand: cd services/auth-service && pip install -r requirements.txt
+    startCommand: cd services/auth-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: SECRET_KEY
+      - key: POSTGRES_USER
+        value: auth_user
+      - key: POSTGRES_PASSWORD
+        value: galadhrim154
+      - key: POSTGRES_SERVER
+        fromService:
+          type: pserv
+          name: sehat-iqra-db
+          envVarKey: INTERNAL_HOST
+      - key: POSTGRES_PORT
+        value: 5432
+      - key: POSTGRES_DB
+        value: auth_db
+
+  # Hospital service
+  - type: web
+    name: sehat-iqra-hospital
+    env: python
+    buildCommand: cd services/hospital-service && pip install -r requirements.txt
+    startCommand: cd services/hospital-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: SECRET_KEY
+
+  # Resource service
+  - type: web
+    name: sehat-iqra-resource
+    env: python
+    buildCommand: cd services/resource-service && pip install -r requirements.txt && alembic upgrade head
+    startCommand: cd services/resource-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: SECRET_KEY
+      - key: POSTGRES_USER
+        value: resource_user
+      - key: POSTGRES_PASSWORD
+        value: galadhrim154
+      - key: POSTGRES_SERVER
+        fromService:
+          type: pserv
+          name: sehat-iqra-db
+          envVarKey: INTERNAL_HOST
+      - key: POSTGRES_PORT
+        value: 5432
+      - key: POSTGRES_DB
+        value: resource_db
+
+  # Blood service
+  - type: web
+    name: sehat-iqra-blood
+    env: python
+    buildCommand: cd services/blood-service && pip install -r requirements.txt
+    startCommand: cd services/blood-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: SECRET_KEY
+
+  # NGO service
+  - type: web
+    name: sehat-iqra-ngo
+    env: python
+    buildCommand: cd services/ngo-service && pip install -r requirements.txt
+    startCommand: cd services/ngo-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: SECRET_KEY
+
+  # Notification service
+  - type: web
+    name: sehat-iqra-notification
+    env: python
+    buildCommand: cd services/notification-service && pip install -r requirements.txt && alembic upgrade head
+    startCommand: cd services/notification-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: SECRET_KEY
+      - key: POSTGRES_USER
+        value: notification_user
+      - key: POSTGRES_PASSWORD
+        value: galadhrim154
+      - key: POSTGRES_SERVER
+        fromService:
+          type: pserv
+          name: sehat-iqra-db
+          envVarKey: INTERNAL_HOST
+      - key: POSTGRES_PORT
+        value: 5432
+      - key: POSTGRES_DB
+        value: notification_db
+
+  # AI service
+  - type: web
+    name: sehat-iqra-ai
+    env: python
+    buildCommand: cd services/ai-service && pip install -r requirements.txt
+    startCommand: cd services/ai-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: SECRET_KEY
+      - key: OPENROUTER_API_KEY
+        fromService:
+          type: web
+          name: sehat-iqra-gateway
+          envVarKey: OPENROUTER_API_KEY

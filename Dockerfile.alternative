@@ -1,0 +1,49 @@
+# Use Python base image
+FROM python:3.11-slim
+
+# Install PostgreSQL client and other dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    libpq-dev \
+    gcc \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements files from all services
+COPY services/gateway-service/requirements.txt /app/requirements-gateway.txt
+COPY services/auth-service/requirements.txt /app/requirements-auth.txt
+COPY services/hospital-service/requirements.txt /app/requirements-hospital.txt
+COPY services/resource-service/requirements.txt /app/requirements-resource.txt
+COPY services/blood-service/requirements.txt /app/requirements-blood.txt
+COPY services/ngo-service/requirements.txt /app/requirements-ngo.txt
+COPY services/notification-service/requirements.txt /app/requirements-notification.txt
+COPY services/ai-service/requirements.txt /app/requirements-ai.txt
+
+# Install all requirements
+RUN pip install --no-cache-dir -r requirements-gateway.txt \
+    && pip install --no-cache-dir -r requirements-auth.txt \
+    && pip install --no-cache-dir -r requirements-hospital.txt \
+    && pip install --no-cache-dir -r requirements-resource.txt \
+    && pip install --no-cache-dir -r requirements-blood.txt \
+    && pip install --no-cache-dir -r requirements-ngo.txt \
+    && pip install --no-cache-dir -r requirements-notification.txt \
+    && pip install --no-cache-dir -r requirements-ai.txt \
+    && pip install --no-cache-dir gunicorn uvicorn
+
+# Copy the entire project
+COPY . .
+
+# Create a script to run the gateway service
+RUN echo '#!/bin/bash\n\
+cd /app/services/gateway-service\n\
+exec gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000\n\
+' > /app/run.sh && chmod +x /app/run.sh
+
+# Expose the gateway service port
+EXPOSE 8000
+
+# Run the gateway service
+CMD ["/app/run.sh"]

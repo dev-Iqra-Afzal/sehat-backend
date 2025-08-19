@@ -12,3 +12,13 @@ services:
         generateValue: true
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: DOCKER_HOST
+        value: unix:///var/run/docker.sock
+      - key: DOCKER_BUILDKIT
+        value: "1"
+      - key: COMPOSE_DOCKER_CLI_BUILD
+        value: "1"
+    disk:
+      name: docker-data
+      mountPath: /var/lib/docker
+      sizeGB: 10
