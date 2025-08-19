@@ -140,6 +140,26 @@ services:
     networks:
       - sehat-network
 
+  gateway-service:
+    build: ./services/gateway-service
+    container_name: gateway-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/gateway-service:/app
+    env_file:
+      - ./services/gateway-service/.env-example
+    depends_on:
+      - auth-service
+      - hospital-service
+      - resource-service
+      - blood-service
+      - ngo-service
+      - notification-service
+      - ai-service
+    networks:
+      - sehat-network
+
 
 volumes:
   sehat_data:

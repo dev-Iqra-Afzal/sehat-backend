@@ -10,6 +10,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..core.database import async_get_db
 from ..models.notification import Notification
+from ..core.config import settings
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -89,29 +90,35 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 # ---------------------- RabbitMQ Async Consumer ----------------------
 
 async def rabbitmq_consumer():
-    print("Connecting to RabbitMQ...")
-    connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq/")
-    print("Connected!")
+    while True:
+        try:
+            print(f"Connecting to RabbitMQ at {settings.RABBITMQ_HOST}...")
+            connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
+            print("Connected!")
 
-    channel = await connection.channel()
-    print("Channel created")
+            channel = await connection.channel()
+            print("Channel created")
 
-    queue = await channel.declare_queue("notifications", durable=True)
-    print("Queue declared")
+            queue = await channel.declare_queue("notifications", durable=True)
+            print("Queue declared")
 
-    async with queue.iterator() as queue_iter:
-        async for message in queue_iter:
-            async with message.process():
-                try:
-                    print("Message received:", message.body)
-                    payload = json.loads(message.body)
-                    async for db in async_get_db():
-                        for uid in payload.get("user_ids", []):
-                            note = await save_notification(db, uid, payload["title"], payload["message"])
-                            print(f"Notification saved for user {uid}: {note}")
-                            # await broadcast_notification(uid, note)  # optional
-                except Exception as e:
-                    print("Error processing message:", e)
+            async with queue.iterator() as queue_iter:
+                async for message in queue_iter:
+                    async with message.process():
+                        try:
+                            print("Message received:", message.body)
+                            payload = json.loads(message.body)
+                            async for db in async_get_db():
+                                for uid in payload.get("user_ids", []):
+                                    note = await save_notification(db, uid, payload["title"], payload["message"])
+                                    print(f"Notification saved for user {uid}: {note}")
+                                    # await broadcast_notification(uid, note)  # optional
+                        except Exception as e:
+                            print("Error processing message:", e)
+        except Exception as e:
+            print(f"RabbitMQ connection error: {e}")
+            print("Retrying in 5 seconds...")
+            await asyncio.sleep(5)
 
 
 # ---------------------- Startup Event ----------------------

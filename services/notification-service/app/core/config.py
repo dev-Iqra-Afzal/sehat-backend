@@ -31,7 +31,7 @@ class DatabaseSettings(BaseSettings):
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "notification_db_password")
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "postgres")
     POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", 5432))
-    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "resource_db")
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "notification_db")
     POSTGRES_SYNC_PREFIX: str = os.getenv("POSTGRES_SYNC_PREFIX", "postgresql://")
     POSTGRES_ASYNC_PREFIX: str = os.getenv("POSTGRES_ASYNC_PREFIX", "postgresql+asyncpg://")
     POSTGRES_URL: str | None = os.getenv("POSTGRES_URL")
@@ -55,6 +55,17 @@ class RedisQueueSettings(BaseSettings):
     REDIS_QUEUE_PORT: int = int(os.getenv("REDIS_QUEUE_PORT", 6379))
 
 
+class RabbitMQSettings(BaseSettings):
+    RABBITMQ_HOST: str = os.getenv("RABBITMQ_HOST", "localhost")
+    RABBITMQ_PORT: int = int(os.getenv("RABBITMQ_PORT", 5672))
+    RABBITMQ_USER: str = os.getenv("RABBITMQ_USER", "guest")
+    RABBITMQ_PASSWORD: str = os.getenv("RABBITMQ_PASSWORD", "guest")
+    
+    @property
+    def RABBITMQ_URL(self) -> str:
+        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/"
+
+
 class EnvironmentOption(Enum):
     LOCAL = "local"
     STAGING = "staging"
@@ -71,6 +82,7 @@ class Settings(
     DatabaseSettings,
     CryptSettings,
     RedisQueueSettings,
+    RabbitMQSettings,
     EnvironmentSettings,
 ):
     pass
