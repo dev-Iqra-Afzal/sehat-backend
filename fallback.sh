@@ -4,7 +4,7 @@ set -e
 echo "Running in fallback mode - starting gateway service directly"
 
 # Install requirements for gateway service
-cd /app/services/gateway-service
+cd ./services/gateway-service
 pip install -r requirements.txt
 
 # Set environment variables
