@@ -1,28 +1,23 @@
+from typing import List, Optional
+
 from fastapi import APIRouter, Request, Response
 import httpx
 
 
-def create_proxy_router(prefix: str, target_url: str, tags: list[str] | None = None) -> APIRouter:
-    """Create a proxy router forwarding requests to the target service."""
-    router = APIRouter(prefix=prefix, tags=tags or [])
+def create_proxy_router(prefix: str, target_url: str, tags: Optional[List[str]] = None) -> APIRouter:
+    """Create a router that proxies all requests to another service."""
+    router = APIRouter(prefix=prefix, tags=tags)
 
-    async def proxy(request: Request, path: str = ""):
-        url = target_url.rstrip("/")
-        if path:
-            url = f"{url}/{path}"
-
-        async with httpx.AsyncClient() as client:
+    @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+    async def proxy(request: Request, path: str) -> Response:
+        async with httpx.AsyncClient(base_url=target_url) as client:
             resp = await client.request(
                 request.method,
-                url,
+                path,
+                headers={k: v for k, v in request.headers.items() if k.lower() != "host"},
                 params=request.query_params,
                 content=await request.body(),
-                headers={k: v for k, v in request.headers.items() if k.lower() != "host"},
             )
+        return Response(content=resp.content, status_code=resp.status_code, headers=dict(resp.headers))
 
-        headers = dict(resp.headers)
-        return Response(content=resp.content, status_code=resp.status_code, headers=headers)
-
-    router.add_api_route("/{path:path}", proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
-    router.add_api_route("", proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
     return router
