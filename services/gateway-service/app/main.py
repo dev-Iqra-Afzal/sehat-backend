@@ -38,7 +38,7 @@ app.include_router(ai.router, prefix=settings.API_V1_STR)
 def root():
     return {"message": "Welcome to Sehat-Iqra API Gateway"}
 
-@app.get(f"{settings.API_V1_STR}/health")
+@app.get(f"/health")
 def health_check():
     return {
         "status": "healthy",
